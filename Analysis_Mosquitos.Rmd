@@ -1,0 +1,185 @@
+---
+title: "Analysis_Mosquitos"
+output: html_document
+date: "2023-12-06"
+---
+
+Data: https://www.azdhs.gov/preparedness/epidemiology-disease-control/index.php#data-stats-past-years 
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(readr)
+library(gt)
+library(tufte)
+library(feasts)
+library(tsibble)
+library(lubridate)
+library(janitor)
+library(patchwork)
+
+
+```
+
+
+```{r}
+west_nile <- read.csv("data/west_nile_monthly.csv")
+
+
+monthly_rainfall <- read_csv("data/monthly_rainfall.csv") %>% clean_names()
+
+
+monthly_temp <- read_csv("data/monthly_temp.csv") %>%  clean_names()
+
+
+
+```
+
+
+```{r}
+# Preping datasets
+west_nile <- west_nile %>% 
+  filter(Measure == "Records with zeros along MONTHREP")
+# Setting column names to be factors
+west_nile[, 4:15] <- lapply(west_nile[, 4:15], as.factor)
+
+column_names <- names(west_nile)[4:15]
+
+
+# Pivot longer
+west_nile <- west_nile %>%
+  pivot_longer(cols = all_of(column_names),
+               names_to = "month",
+               values_to = "cases")
+
+# Combine my year and months
+west_nile$date <- paste(west_nile$Year, west_nile$month, sep="_")
+
+## Prepare time series including 2021 
+west_nile_2021 <- west_nile %>% 
+  mutate(date1 =lubridate::ym(date),
+         date = yearmonth(date),
+         cases = as.numeric(as.character(cases))) %>% 
+  select(c(date,cases,date1))
+
+# Time series excluding 2021
+west_nile_2020 <- west_nile %>% 
+  mutate(date1 =lubridate::ym(date),
+         date = yearmonth(date),
+         cases = as.numeric(as.character(cases))) %>% 
+  filter(date1 < "2021-01-01") %>% 
+  select(c(date,cases,date1))
+
+
+#west_nile$cases <- as.numeric(west_nile$cases)
+
+ggplot(west_nile, aes(x = date, y = cases)) +
+  geom_line(color = "blue") + geom_smooth() 
+  scale_x_date(breaks = scales::pretty_breaks(n=10),date_labels = "%b-%Y") 
+
+## stargazer
+
+ggplot(west_nile_2020, aes(x = date1, y = cases)) +
+  geom_line(color = "blue") + geom_smooth() +
+  scale_x_date(breaks = scales::pretty_breaks(n=10),date_labels = "%b-%Y") +
+  labs(x = "Date")
+
+```
+
+```{r}
+# Decomposition Development
+
+# Set date in correct format and change cases into numeric values
+west_nile_2020 <- west_nile_2020 %>% 
+  mutate(date = yearmonth(date),
+         cases = as.numeric(as.character(cases))) 
+
+
+# Select the columns we are interested in
+west_nile_2020 <- west_nile_2020 %>% select(c(date,cases)) 
+
+# Decomposition 
+as_tsibble(west_nile_2020) %>% 
+  model(classical_decomposition(cases, type = "additive")) %>%
+  components() %>%
+  autoplot() 
+
+```
+
+```{r}
+# Decomposition including 2021 data 
+
+
+# Set date in correct format and change cases into numeric values
+west_nile_2021 <- west_nile_2021 %>% 
+  mutate(date = yearmonth(date),
+         cases = as.numeric(as.character(cases))) 
+
+
+# Select the columns we are interested in
+west_nile_2021 <- west_nile_2021 %>% select(c(date,cases)) 
+
+# Decomposition 
+as_tsibble(west_nile_2021) %>% 
+  model(classical_decomposition(cases, type = "additive")) %>%
+  components() %>%
+  autoplot() 
+
+
+
+```
+
+
+
+```{r}
+# Monthly rainfall data
+
+monthly_rainfall <- monthly_rainfall  %>% 
+  select(time_0, data_0) %>% 
+  rename("date" = time_0,
+          "rainfall_in" = data_0) %>% 
+  mutate(date = ym(date)) %>% filter(date >= "2006-01-01" & date <= "2021-12-1")
+
+ggplot(monthly_rainfall, aes(x = date, y = rainfall_in)) +
+  geom_line(color = "red") +
+  scale_x_date(breaks = scales::pretty_breaks(n=10),date_labels = "%b-%Y")
+
+
+## create a model with mosquitos -- temp and rainfall
+## plot rainfall and temperature 
+## plot rainfall and mosquitos
+
+
+
+```
+
+```{r}
+## Monthly Temperature
+
+monthly_temp <- monthly_temp %>% 
+  select(time_0, data_0) %>% 
+  rename("date" = time_0,
+         "temp_f" = data_0) %>% 
+  mutate(date = ym(date)) %>% 
+  filter(date >= "2006-01-01" & date < "2021-12-1")
+  
+  
+```
+
+
+```{r}
+### Join data
+mosquitos_data <- left_join(west_nile_1,monthly_rainfall, by = "date")
+
+
+```
+
+```{r}
+summary(lm(cases ~ rainfall_in, data = mosquitos_data))
+```
+
+
+seasonal trends of west nile cases and then seasomal tremds of rainfall and dp a regression model on them
+
