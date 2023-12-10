@@ -6,10 +6,10 @@ date: "2023-12-06"
 
 Data: https://www.azdhs.gov/preparedness/epidemiology-disease-control/index.php#data-stats-past-years 
 
-
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 
+# Import libraries
 library(tidyverse)
 library(readr)
 library(gt)
@@ -19,27 +19,24 @@ library(tsibble)
 library(lubridate)
 library(janitor)
 library(patchwork)
-
-
 ```
 
 
 ```{r}
+# Import data
+# Cases reported
 west_nile <- read.csv("data/west_nile_monthly.csv")
 
-
+# Monthly rainfall
 monthly_rainfall <- read_csv("data/monthly_rainfall.csv") %>% clean_names()
 
-
+# Monthly temperature
 monthly_temp <- read_csv("data/monthly_temp.csv") %>%  clean_names()
-
-
-
 ```
 
 
 ```{r}
-# Preping datasets
+# Prepping datasets
 west_nile <- west_nile %>% 
   filter(Measure == "Records with zeros along MONTHREP")
 # Setting column names to be factors
@@ -75,7 +72,7 @@ west_nile_2020 <- west_nile %>%
 
 #west_nile$cases <- as.numeric(west_nile$cases)
 
-ggplot(west_nile, aes(x = date, y = cases)) +
+ggplot(west_nile_2021, aes(x = date, y = cases)) +
   geom_line(color = "blue") + geom_smooth() 
   scale_x_date(breaks = scales::pretty_breaks(n=10),date_labels = "%b-%Y") 
 
@@ -171,13 +168,18 @@ monthly_temp <- monthly_temp %>%
 
 ```{r}
 ### Join data
-mosquitos_data <- left_join(west_nile_1,monthly_rainfall, by = "date")
-
+mosquitos_data <- west_nile_2020 %>% left_join(.,
+                                               monthly_rainfall, by = "date") %>%
+  left_join(.,monthly_temp, by = "date") %>% mutate(date = yearmonth(date),
+                                                    temp_c = (temp_f - 32)*5/9) 
 
 ```
 
 ```{r}
-summary(lm(cases ~ rainfall_in, data = mosquitos_data))
+summary(lm(cases ~ temp_c + rainfall_in, data = mosquitos_data))
+
+
+summary(lm(cases))
 ```
 
 
