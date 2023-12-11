@@ -3,8 +3,13 @@ title: "Analysis_Mosquitos"
 output: html_document
 date: "2023-12-06"
 ---
+# Does precipitation and temperature play a role in West Nile Virus Cases in Maricopa County?
+I analyzed monthly reported West Nile cases in Maricopa County to observe if there
+is a reason why this county has seen an uptick in cases from 2006-2021
 
 Data: https://www.azdhs.gov/preparedness/epidemiology-disease-control/index.php#data-stats-past-years 
+
+
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
@@ -22,7 +27,7 @@ library(patchwork)
 ```
 
 
-```{r}
+```{r, include=FALSE}
 # Import data
 # Cases reported
 west_nile <- read.csv("data/west_nile_monthly.csv")
