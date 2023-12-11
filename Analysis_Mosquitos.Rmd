@@ -2,16 +2,80 @@
 title: "Analysis_Mosquitos"
 output: html_document
 date: "2023-12-06"
+editor_options: 
+  markdown: 
+    wrap: 72
 ---
+
 # Does precipitation and temperature play a role in West Nile Virus Cases in Maricopa County?
-I analyzed monthly reported West Nile cases in Maricopa County to observe if there
-is a reason why this county has seen an uptick in cases from 2006-2021
 
-Data: https://www.azdhs.gov/preparedness/epidemiology-disease-control/index.php#data-stats-past-years 
+I analyzed monthly reported West Nile cases in Maricopa County to
+observe if climate and precipitation are playing a role in why this
+county has seen an uptick in cases from 2006-2021. I also analyzed if
+rainfall rates had any relationship to the endemic Maricopa County
+experienced in 2021.
 
+Hypothesis: Less rainfall higher cases of West Nile Virus
 
+Look at weekly cases of West Nile Virus in 2021 and then compare that to
+weekly precipitation data bc supposedly that is why there was a spike
 
+Data:
+<https://www.azdhs.gov/preparedness/epidemiology-disease-control/index.php#data-stats-past-years>
 
+## Introduction
+
+The West Nile virus was first reported in the United States in 1999 and
+since then there as been an uptick of cases. It is now the most common
+cause of mosquito-borne diseases in the United States. While some may
+experience mild symptoms such as rashes, body aches, and vomiting. For
+others the Wets Nile virus can cause severe central nervous system
+damage and can result in death. Since its initial report, there have
+been a total of 55,443 cases reported to the U.S. Centers for Disease
+Control and Prevention (CDC)[\^1]. The transmission of the virus begins
+with birds infecting mosquitoes which then in turn infect humans. The
+ideal temperature for mosquitoes to survive is 50-95°F (10-35°C) and the
+*Goldilocks* temperature is 75°F (24°C) [\^2] [\^3]. Precipitation also
+plays a role in mosquitoes reproduction as standing water is their
+preferred breeding ground.
+
+Climate change is exacerbating the infections as warmer temperatures
+create more favorable conditions for breeding and expand their
+geographic range. It is also affecting bird's migratory patterns, birds
+are a host of the virus, and the change in their migratory pattern can
+expand the range of mosquitoes.
+
+The area of interest for this project is Maricopa County, Arizona. It is
+one of 6 counties in the United States that saw high rates of West Nile
+virus cases during 2009-2018. West Nile virus is an endemic in Maricopa
+County, since it was first detected in 2003 there have been 4 outbreaks.
+Their largest outbreak was during 2021, a total of 1,487 human West Nile
+Virus cases were identified; 956 (64.3%) patients had neuroinvasive
+disease, and
+101 (6.8%) died [\^4]
+
+```{r}
+# code chunk of Maricopa County in Arizona for geographical context
+```
+
+WNV is the most widely distributed of the encephalitic flaviviruses, it
+is a vector-borne pathogen of global importance.
+
+[\^1]: Climate change indicators: West Nile virus \| US EPA. (n.d.).
+<https://www.epa.gov/climate-indicators/climate-change-indicators-west-nile-virus>
+
+[\^2]: Bailey, M. (2022, March 29). *Altered by climate change, the U.S.
+could become ideal for West Nile to thrive*. PBS.
+<https://www.pbs.org/newshour/health/altered-by-climate-change-the-u-s-could-become-ideal-for-west-nile-to-thrive#:~:text=For%20the%20three%20species%20of,the%20course%20of%20one%20day.>
+
+[\^3]: *This news bites: More mosquito days*. This News Bites: More
+Mosquito Days \| Climate Central. (2020, July 29).
+<https://www.climatecentral.org/climate-matters/more-mosquito-days>
+
+[\^4]: Kretschmer, M., Ruberto, I., Townsend, J., Zabel, K., & Will, J.
+(2023, April 28). Unprecedented outbreak of West Nile virus --- Maricopa
+County, Arizona, 2021.
+<https://www.cdc.gov/mmwr/volumes/72/wr/pdfs/mm7217a1-H.pdf>
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
@@ -28,7 +92,6 @@ library(janitor)
 library(patchwork)
 ```
 
-
 ```{r, include=FALSE}
 # Import data
 # Cases reported
@@ -40,7 +103,6 @@ monthly_rainfall <- read_csv("data/monthly_rainfall.csv") %>% clean_names()
 # Monthly temperature
 monthly_temp <- read_csv("data/monthly_temp.csv") %>%  clean_names()
 ```
-
 
 ```{r}
 # Prepping datasets
@@ -135,8 +197,6 @@ as_tsibble(west_nile_2021) %>%
 
 ```
 
-
-
 ```{r}
 # Monthly rainfall data
 
@@ -172,7 +232,6 @@ monthly_temp <- monthly_temp %>%
   
 ```
 
-
 ```{r}
 ### Join data
 mosquitos_data <- west_nile_2020 %>% left_join(.,
@@ -189,6 +248,5 @@ summary(lm(cases ~ temp_c + rainfall_in, data = mosquitos_data))
 summary(lm(cases))
 ```
 
-
-seasonal trends of west nile cases and then seasomal tremds of rainfall and dp a regression model on them
-
+seasonal trends of west nile cases and then seasomal tremds of rainfall
+and dp a regression model on them
