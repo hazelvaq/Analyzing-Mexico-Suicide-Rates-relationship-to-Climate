@@ -74,9 +74,10 @@ library(ggspatial)
 library(dplyr)
 library(tseries)
 library(vars)
+library(ggthemes)
 ```
 
-```{r, echo=TRUE}
+```{r, echo=TRUE, dev='png'}
 # code chunk of Maricopa County in Arizona for geographical context
 
 maricopa <- read_sf("data/tl_2022_us_county") %>% 
@@ -92,16 +93,16 @@ arizona <- us_states %>%
   st_transform(crs = st_crs(maricopa))
 
 ggplot() +
-  geom_sf(data = arizona, fill = "white") +
+  geom_sf(data = arizona, fill = "white", linewidth = 0.5, color = "black") +
   geom_sf(data = maricopa, fill = "#863195") +
    annotation_scale(location = 'bl', width = 0.1) +
   annotation_north_arrow(location = 'tl',height = unit(.8, "cm"),
   width = unit(.8, "cm"), style = north_arrow_fancy_orienteering()) + 
-  geom_sf_text(data = arizona, label = "Arizona", nudge_y = 0.2)
+  geom_sf_text(data = arizona, label = "Arizona", nudge_y = 0.2) +
+  theme_map()
   
 ```
 
-##### here i will talk about what i am researching/ analyzing 
 
 [^1]: Climate change indicators: West Nile virus US EPA. (n.d.).
 <https://www.epa.gov/climate-indicators/climate-change-indicators-west-nile-virus>
@@ -280,6 +281,7 @@ seasonal trends of west nile cases and then seasonal trends of rainfall
 and dp a regression model on them
 
 ### 2021 Monsoon 
+Week 24 - 39 : June 15 through Sept. 30 was Monsoon season in 2021
 
 ```{r}
 # import 2021 rainfall data
@@ -307,7 +309,6 @@ p2 <- ggplot(cases_2021, aes(x = week, y = average_prcp)) +
   theme_classic()
 
 p1 / p2
-
 ```
 
 
@@ -370,22 +371,53 @@ grangertest(precipitation_diff_2, cases_diff_2, order = 4)
 
 ```
 
-```{r}
+```{r, echo=TRUE}
+# Cross Correlation Functions CCF for unstable
+ccf_values <- ccf(cases_2021$cases, cases_2021$average_prcp)
 
-ccf(cases_2021$cases, cases_2021$average_prcp)
+ccf_values 
+
+## Week 7 is where it peaks
+```
+```{r}
+## CCF for stable
 
 ccf(cases_diff_2, precipitation_diff_2)
 
 ```
 
 
-Week 24 - 39 : June 15 through Sept. 30 was Monsoon season in 2021
+Run a linear regression of reported case on created lagged precipitation
+
+```{r}
+# Create a lagged precipitation
+
+# Run a lag for 7
+lag7<- lag(cases_2021$average_prcp, 7)
+#remove rows with NA values due to lag
+lag7 <- na.omit(lag7)
+
+length(lag7)
+
+# remove first seven values of cases
+truncated_cases <- cases_2021$cases[8:52]
+
+summary(lm(truncated_cases ~ lag7))
+  
+# Run a lag for 2 - life cycle of a mosquito
+
+lag2 <- lag(cases_2021$average_prcp,2)
+lag2 <- na.omit(lag2)
+truncated_cases2 <- cases_2021$cases[3:52]
+
+summary(lm(truncated_cases2 ~ lag2))
 
 
-Conduct a t-test 
 
-Null Hypothesis: Precipitation rates has no affects on the rates of West Nile Virus
-cases
+```
 
 
+```{r}
 
+summary(lm(cases~average_prcp, data = cases_2021))
+```
