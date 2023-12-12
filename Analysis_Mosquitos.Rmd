@@ -1,14 +1,11 @@
 ---
-title: "Analysis_Mosquitos"
+title: "Does precipitation and temperature play a role in West Nile Virus Cases in Maricopa County?"
 output: html_document
 date: "2023-12-06"
 editor_options: 
   markdown: 
     wrap: 72
 ---
-
-# Does precipitation and temperature play a role in West Nile Virus Cases in Maricopa County?
-
 I analyzed monthly reported West Nile cases in Maricopa County to
 observe if climate and precipitation are playing a role in why this
 county has seen an uptick in cases from 2006-2021. I also analyzed if
@@ -52,6 +49,7 @@ Their largest outbreak was during 2021, a total of 1,487 human West Nile
 Virus cases were identified; 956 (64.3%) patients had neuroinvasive
 disease, and 101 (6.8%) died [^5].
 
+Does precipitation and temperature play a role in West Nile Virus Cases in Maricopa County?
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 
@@ -75,18 +73,16 @@ library(dplyr)
 library(tseries)
 library(vars)
 library(ggthemes)
+library(stargazer)
 ```
 
-```{r, echo=TRUE, dev='png'}
+```{r, echo=FALSE, dev='png', error=FALSE, warning=FALSE}
 # code chunk of Maricopa County in Arizona for geographical context
 
 maricopa <- read_sf("data/tl_2022_us_county") %>% 
   clean_names() %>% 
   filter(countyns == "00037026") 
 
-plot(maricopa)
-
-us_states
 
 arizona <- us_states %>%
   filter(NAME %in% c('Arizona')) %>%
@@ -136,7 +132,7 @@ monthly_temp <- read_csv("data/monthly_temp.csv") %>%  clean_names()
 ```
 
 ## Time series decomposition
-```{r, echo=FALSE}
+```{r, message=FALSE, error=FALSE, warning=FALSE}
 # Prepping datasets
 west_nile <- west_nile %>% 
   filter(Measure == "Records with zeros along MONTHREP")
@@ -159,8 +155,8 @@ west_nile$date <- paste(west_nile$Year, west_nile$month, sep="_")
 west_nile_2021 <- west_nile %>% 
   mutate(date1 = ym(date),
          date = yearmonth(date),
-         cases = as.numeric(as.character(cases))) %>% 
-  select(c(date,cases))
+         cases = as.numeric(as.character(cases))) %>%
+  dplyr::select(cases,date,date1)
 
 
 # Time series excluding 2021
@@ -169,26 +165,29 @@ west_nile_2020 <- west_nile %>%
          date = yearmonth(date),
          cases = as.numeric(as.character(cases))) %>% 
   filter(date1 < "2021-01-01") %>% 
-  select(c(date,cases,date1))
+  dplyr::select(date,cases,date1)
 
+png(file = "Maricopa_cases.png")
 
-
-ggplot(west_nile_2021, aes(x = date, y = cases)) +
-  geom_line(color = "blue") + geom_smooth() 
-  scale_x_date(breaks = scales::pretty_breaks(n=10),date_labels = "%b-%Y") 
-
-
-ggplot(west_nile_2020, aes(x = date1, y = cases)) +
-  geom_line(color = "blue") + geom_smooth() +
+w_2021 <- ggplot(west_nile_2021, aes(x = date1, y = cases)) +
+  geom_line(color = "blue") +
   scale_x_date(breaks = scales::pretty_breaks(n=10),date_labels = "%b-%Y") +
-  labs(x = "Date")
+    labs(x = "Date", title = "2006-2021 reported cases") + theme_classic()
+
+w_2020<- ggplot(west_nile_2020, aes(x = date1, y = cases)) +
+  geom_line(color = "blue") +
+  scale_x_date(breaks = scales::pretty_breaks(n=10),date_labels = "%b-%Y") +
+  labs(x = "Date", title = "2006-2020 reported cases") + theme_classic()
+
+w_2021 / w_2020
+
+
 
 ```
 
 
-```{r}
+```{r error=FALSE, message=FALSE, warning=FALSE}
 # Decomposition Development
-
 # Set date in correct format and change cases into numeric values
 west_nile_2020 <- west_nile_2020 %>% 
   mutate(date = yearmonth(date),
@@ -196,7 +195,7 @@ west_nile_2020 <- west_nile_2020 %>%
 
 
 # Select the columns we are interested in
-west_nile_2020 <- west_nile_2020 %>% select(c(date,cases)) 
+west_nile_2020 <- west_nile_2020 %>% dplyr::select(date,cases) 
 
 # Decomposition 
 as_tsibble(west_nile_2020) %>% 
@@ -206,9 +205,8 @@ as_tsibble(west_nile_2020) %>%
 
 ```
 
-```{r}
+```{r error=FALSE, message=FALSE, warning=FALSE}
 # Decomposition including 2021 data 
-
 
 # Set date in correct format and change cases into numeric values
 west_nile_2021 <- west_nile_2021 %>% 
@@ -217,7 +215,7 @@ west_nile_2021 <- west_nile_2021 %>%
 
 
 # Select the columns we are interested in
-west_nile_2021 <- west_nile_2021 %>% select(c(date,cases)) 
+west_nile_2021 <- west_nile_2021 %>% dplyr::select(date,cases) 
 
 # Decomposition 
 as_tsibble(west_nile_2021) %>% 
@@ -225,15 +223,13 @@ as_tsibble(west_nile_2021) %>%
   components() %>%
   autoplot() 
 
-
-
 ```
 
-```{r}
+```{r, echo=FALSE}
 # Monthly rainfall data
 
 monthly_rainfall <- monthly_rainfall  %>% 
-  select(time_0, data_0) %>% 
+  dplyr::select(time_0, data_0) %>% 
   rename("date" = time_0,
           "rainfall_in" = data_0) %>% 
   mutate(date = ym(date)) %>% filter(date >= "2006-01-01" & date <= "2021-12-1")
@@ -255,7 +251,7 @@ ggplot(monthly_rainfall, aes(x = date, y = rainfall_in)) +
 ## Monthly Temperature
 
 monthly_temp <- monthly_temp %>% 
-  select(time_0, data_0) %>% 
+  dplyr::select(time_0, data_0) %>% 
   rename("date" = time_0,
          "temp_f" = data_0) %>% 
   mutate(date = ym(date)) %>% 
@@ -287,7 +283,7 @@ Week 24 - 39 : June 15 through Sept. 30 was Monsoon season in 2021
 # import 2021 rainfall data
 rainfall_2021 <- read_csv("data/2021-rainfall-maricopa.csv") %>% 
   clean_names() %>% 
-  select(c(date, prcp)) %>% 
+  dplyr::select(date, prcp) %>% 
   mutate(week = week(ymd(date))) %>% 
   group_by(week) %>% 
   summarise(average_prcp = mean(prcp, na.rm = TRUE))
@@ -300,10 +296,10 @@ weekly_cases <- read_csv("data/az_2021_cases.csv")
 cases_2021 <- left_join(weekly_cases, rainfall_2021, by = "week")
 
 
-p1 <- ggplot(cases_2021, aes(x = week, y = cases)) + 
+p1 <- ggplot(cases_2021, aes(x = week, y = cases)) +
   geom_line(color = "red") + labs(x = "Week", y = "Reported Cases Count") +
   theme_classic()
-  
+
 p2 <- ggplot(cases_2021, aes(x = week, y = average_prcp)) +
   geom_line(color = "deepskyblue3") + labs(x = "Week", y = "Average precipitation (in)") +
   theme_classic()
@@ -312,33 +308,10 @@ p1 / p2
 ```
 
 
-### Granger Causality
-
-- Does not prove direct causation 
-- Measures the extent to which the past values of one variable provide valuable information for forecasting the other variable's behavior
-
-Requirements:
-- stationary
-- constant mean
-- constant variance
-- no seasonal component
-
-Steps: transform non-stationary data to stationary by differencing it - first or 
-second
-
-Yt is said to "Granger cause" Xt+1 provided Yt occurs before Xt+1 and contains
-data for forecasting Xt+1
-
-```{r}
-# Check if average precipitation is stationary
-adf.test(cases_2021$cases, alternative = "stationary")
-
-# Check if average precipitation is stationary
-adf.test(cases_2021$average_prcp, alternative = "stationary")
-```
 
 
-```{r}
+
+```{r, eval = FALSE}
 
 # Calculate first differences for 'cases' and 'average_prcp'
 cases_diff_1 <- diff(cases_2021$cases)
@@ -357,25 +330,18 @@ adf.test(cases_diff_2, alternative = "stationary")
 adf.test(precipitation_diff_2, alternative = "stationary")
 ```
 
-```{r}
-# Conduct the granger test
-
-#Assuming 'cases' and 'average_prcp' are your variables
-data <- cbind(cases_diff_2, precipitation_diff_2)
-
-# Determine lag order selection using information criteria
-VARselect(data, lag.max = 10, type = "both")
 
 
-grangertest(precipitation_diff_2, cases_diff_2, order = 4)
-
-```
+In the relationship between two time series (y,x) the series y 
+may be related to past lags of the x-series. 
 
 ```{r, echo=TRUE}
 # Cross Correlation Functions CCF for unstable
+png(filename = "CCF_lag.png")
+
 ccf_values <- ccf(cases_2021$cases, cases_2021$average_prcp)
 
-ccf_values 
+plot(ccf_values, main = "CCF lag for Cases and Average Precipitation") 
 
 ## Week 7 is where it peaks
 ```
@@ -402,17 +368,19 @@ length(lag7)
 # remove first seven values of cases
 truncated_cases <- cases_2021$cases[8:52]
 
-summary(lm(truncated_cases ~ lag7))
-  
-# Run a lag for 2 - life cycle of a mosquito
+m1 <- lm(truncated_cases ~ lag7)
 
-lag2 <- lag(cases_2021$average_prcp,2)
-lag2 <- na.omit(lag2)
-truncated_cases2 <- cases_2021$cases[3:52]
-
-summary(lm(truncated_cases2 ~ lag2))
+summary(m1)
+stargazer(m1, 
+          title = "Regression Lag Model Results", 
+          type = "text")
 
 
+stargazer(m1, m2, m3, title = 'Regression Results',type="text", dep.var.labels = c('Heart Attack Related ED Visits per 10,000'),
+          covariate.labels=c("Median Household Income","PM 2.5 Concentration","% Population > 25 with less than a High School Education"),
+          omit.stat = c('f'),
+          font.size = 'small',align = TRUE)
+summary(m1)
 
 ```
 
